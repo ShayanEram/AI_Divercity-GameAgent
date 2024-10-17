@@ -33,6 +33,87 @@ class MyPlayer(PlayerDivercite):
         Returns:
             Action: The best action as determined by minimax.
         """
+        
+        # Heuristic evaluation functions
+        def populateMyCity():
+            pass
 
-        #TODO
-        raise MethodNotImplementedError()
+        def checkOpponentDiversity():
+            pass
+
+        def checkOpponentSingleScore():
+            pass
+
+        def blockOpponentDiversity():
+            pass
+
+        def blockOpponentSingleScore():
+            pass
+
+        def checkOppnentReserveresources():
+            pass 
+        
+        # Minimax algorithm
+        MIN= -1000000000
+        MAX = 1000000000
+
+        def alphaBetaSearch(state: GameState, alpha, beta):
+            value,move = max_value(state, alpha, beta)
+            return value, move
+        
+        def max_value(state: GameState, alpha, beta):
+            if state.is_done():
+                return state.get_player_score(self.piece_type), None
+            bestValue = MIN
+            bestMove = None
+            for action in state.get_possible_heavy_actions():
+                new_state = action.get_next_game_state()
+                value, _ = min_value(new_state, alpha, beta)
+                if value > bestValue:
+                    bestValue = value
+                    bestMove = action
+                    alpha = max(alpha, bestValue)
+                if bestValue >= beta:
+                    return bestValue, bestMove
+            return bestValue, bestMove
+        
+        def min_value(state: GameState, alpha, beta):
+            if state.is_done():
+                return state.get_player_score(self.piece_type), None
+            bestValue = MAX
+            bestMove = None
+            for action in state.get_possible_heavy_actions():
+                new_state = action.get_next_game_state()
+                value, _ = max_value(new_state, alpha, beta)
+                if value < bestValue:
+                    bestValue = value
+                    bestMove = action
+                    beta = min(beta, bestValue)
+                if bestValue <= alpha:
+                    return bestValue, bestMove
+            return bestValue, bestMove
+
+        best_action = None
+        best_score = MIN
+
+        for action in current_state.get_possible_heavy_actions():
+            new_state = action.get_next_game_state()
+            score, _ = alphaBetaSearch(new_state, MIN, MAX)
+            if score > best_score:
+                best_score = score
+                best_action = action
+
+        return best_action
+
+
+
+
+
+   
+
+
+
+
+
+
+
