@@ -23,6 +23,7 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
+        self._table = dict()
 
     def compute_action(self, current_state: GameState, remaining_time: int = 1e9, **kwargs) -> Action:
         """
@@ -53,7 +54,14 @@ class MyPlayer(PlayerDivercite):
             bestAction = None
             for action in state.generate_possible_heavy_actions():
                 new_state = action.get_next_game_state()
-                value, _ = min_value(new_state, alpha, beta)
+
+                # Save time by checking if the state is in the table
+                if new_state in self._table:
+                    value = self._table[new_state]
+                else:
+                    value, _ = min_value(new_state, alpha, beta)
+                    self._table[new_state] = value
+                
                 if value > bestValue:
                     bestValue = value
                     bestAction = action
@@ -69,7 +77,14 @@ class MyPlayer(PlayerDivercite):
             bestAction = None
             for action in state.generate_possible_heavy_actions():
                 new_state = action.get_next_game_state()
-                value, _ = max_value(new_state, alpha, beta)
+
+                # Save time by checking if the state is in the table
+                if new_state in self._table:
+                    value = self._table[new_state]
+                else:
+                    value, _ = max_value(new_state, alpha, beta)
+                    self._table[new_state] = value
+
                 if value < bestValue:
                     bestValue = value
                     bestAction = action
