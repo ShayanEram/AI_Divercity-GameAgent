@@ -25,27 +25,19 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
-        self._table = dict()
 
-    def alphaBetaSearch(self, state: GameState, alpha: float, beta: float):
-        value,move = self.max_value(state, alpha, beta)
+    def alphaBetaSearch(self, state: GameState, alpha: float, beta: float, maxDepth: int):
+        value,move = self.max_value(state, alpha, beta, maxDepth)
         return (value, move)
     
-    def max_value(self, state: GameState, alpha: float, beta: float):
-        if state.is_done():
-            return state.get_player_score(self), None
+    def max_value(self, state: GameState, alpha: float, beta: float, maxDepth: int):
+        if state.is_done() or state.get_step() == maxDepth:
+            return (state.get_player_score(self), None)
         bestValue = self.MIN
         bestAction = None
         for action in state.generate_possible_heavy_actions():
             new_state = action.get_next_game_state()
-
-            # Save time by checking if the state is in the table
-            if new_state in self._table:
-                value = self._table[new_state]
-            else:
-                value, _ = self.min_value(new_state, alpha, beta)
-                self._table[new_state] = value
-            
+            value, _ = self.min_value(new_state, alpha, beta, maxDepth)
             if value > bestValue:
                 bestValue = value
                 bestAction = action
@@ -54,21 +46,14 @@ class MyPlayer(PlayerDivercite):
                 return (bestValue, bestAction)
         return (bestValue, bestAction)
     
-    def min_value(self, state: GameState, alpha:float, beta):
-        if state.is_done():
-            return state.get_player_score(self), None
+    def min_value(self, state: GameState, alpha:float, beta, maxDepth: int):
+        if state.is_done() or state.get_step() == maxDepth:
+            return (state.get_player_score(self), None)
         bestValue = self.MAX
         bestAction = None
         for action in state.generate_possible_heavy_actions():
             new_state = action.get_next_game_state()
-
-            # Save time by checking if the state is in the table
-            if new_state in self._table:
-                value = self._table[new_state]
-            else:
-                value, _ = self.max_value(new_state, alpha, beta)
-                self._table[new_state] = value
-
+            value, _ = self.max_value(new_state, alpha, beta, maxDepth)
             if value < bestValue:
                 bestValue = value
                 bestAction = action
@@ -87,7 +72,8 @@ class MyPlayer(PlayerDivercite):
         Returns:
             Action: The best action as determined by minimax.
         """
-        
-        best_score, best_action = self.alphaBetaSearch(current_state, self.MIN, self.MAX)
+        maxDepth = current_state.get_step() + 4 # more than 4, the game is too long!
+
+        _, best_action = self.alphaBetaSearch(current_state, self.MIN, self.MAX, maxDepth)
 
         return best_action
