@@ -5,6 +5,8 @@ from game_state_divercite import GameStateDivercite
 from seahorse.utils.custom_exceptions import MethodNotImplementedError
 import numpy as np
 
+from seahorse.game.light_action import LightAction
+
 class MyPlayer(PlayerDivercite):
     """
     Player class for Divercite game that makes random moves.
@@ -72,7 +74,29 @@ class MyPlayer(PlayerDivercite):
         Returns:
             Action: The best action as determined by minimax.
         """
-        maxDepth = current_state.get_step() + 4 # more than 4, the game is too long!
+        currentStep = current_state.get_step()
+        maxDepth = currentStep + 4
+
+        # This gets 1 or 2 more point for x4 the time!
+        # match currentStep:
+        #     case 0:
+        #         return LightAction({"piece":'RC', "position": (5, 4)})
+            
+        #     case _ if 0 < currentStep < 15:
+        #         maxDepth = currentStep + 4
+            
+        #     case _ if 15 <= currentStep < 20:
+        #         maxDepth = currentStep + 5
+            
+        #     case _ if 20 <= currentStep < 30:
+        #         maxDepth = currentStep + 6
+            
+        #     # case _ if 30 <= currentStep < 40:
+        #     #     maxDepth = currentStep + 15
+            
+        #     case _:
+        #         maxDepth = 50
+        
 
         _, best_action = self.alphaBetaSearch(current_state, self.MIN, self.MAX, maxDepth)
 
