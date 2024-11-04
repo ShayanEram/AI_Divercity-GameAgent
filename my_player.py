@@ -3,6 +3,7 @@ from seahorse.game.action import Action
 from seahorse.game.game_state import GameState
 from game_state_divercite import GameStateDivercite
 from seahorse.utils.custom_exceptions import MethodNotImplementedError
+import numpy as np
 
 class MyPlayer(PlayerDivercite):
     """
@@ -35,85 +36,48 @@ class MyPlayer(PlayerDivercite):
         """
         
         # Heuristic evaluation functions
-        def populateMyCity():
-            pass
 
-        def checkOpponentDiversity():
-            pass
-
-        def checkOpponentSingleScore():
-            pass
-
-        def blockOpponentDiversity():
-            pass
-
-        def blockOpponentSingleScore():
-            pass
-
-        def checkOppnentReserveresources():
-            pass 
         
         # Minimax algorithm
-        MIN= -1000000000
-        MAX = 1000000000
+        MIN = -np.inf
+        MAX = np.inf
 
-        def alphaBetaSearch(state: GameState, alpha, beta):
+        def alphaBetaSearch(state: GameState, alpha: float, beta: float):
             value,move = max_value(state, alpha, beta)
-            return value, move
+            return (value, move)
         
-        def max_value(state: GameState, alpha, beta):
+        def max_value(state: GameState, alpha: float, beta: float):
             if state.is_done():
-                return state.get_player_score(self.piece_type), None
+                return state.get_player_score(self), None
             bestValue = MIN
-            bestMove = None
-            for action in state.get_possible_heavy_actions():
+            bestAction = None
+            for action in state.generate_possible_heavy_actions():
                 new_state = action.get_next_game_state()
                 value, _ = min_value(new_state, alpha, beta)
                 if value > bestValue:
                     bestValue = value
-                    bestMove = action
+                    bestAction = action
                     alpha = max(alpha, bestValue)
                 if bestValue >= beta:
-                    return bestValue, bestMove
-            return bestValue, bestMove
+                    return (bestValue, bestAction)
+            return (bestValue, bestAction)
         
-        def min_value(state: GameState, alpha, beta):
+        def min_value(state: GameState, alpha:float, beta):
             if state.is_done():
-                return state.get_player_score(self.piece_type), None
+                return state.get_player_score(self), None
             bestValue = MAX
-            bestMove = None
-            for action in state.get_possible_heavy_actions():
+            bestAction = None
+            for action in state.generate_possible_heavy_actions():
                 new_state = action.get_next_game_state()
                 value, _ = max_value(new_state, alpha, beta)
                 if value < bestValue:
                     bestValue = value
-                    bestMove = action
+                    bestAction = action
                     beta = min(beta, bestValue)
                 if bestValue <= alpha:
-                    return bestValue, bestMove
-            return bestValue, bestMove
+                    return (bestValue, bestAction)
+            return (bestValue, bestAction)
 
-        best_action = None
-        best_score = MIN
-
-        for action in current_state.get_possible_heavy_actions():
-            new_state = action.get_next_game_state()
-            score, _ = alphaBetaSearch(new_state, MIN, MAX)
-            if score > best_score:
-                best_score = score
-                best_action = action
+        best_score, best_action = alphaBetaSearch(current_state, MIN, MAX)
 
         return best_action
-
-
-
-
-
-   
-
-
-
-
-
-
-
