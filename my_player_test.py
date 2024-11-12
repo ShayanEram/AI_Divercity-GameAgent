@@ -30,7 +30,6 @@ class MyPlayer(PlayerDivercite):
         self._next_table_reset = 1
 
     def getScore0(self, state: GameState):
-
         return state.scores[self.get_id()] - state.scores[self.opponentId]
 
     def isWin(self, state: GameState):

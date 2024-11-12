@@ -3,6 +3,7 @@ from board_divercite import BoardDivercite
 from seahorse.game.action import Action
 from seahorse.game.game_state import GameState
 from game_state_divercite import GameStateDivercite
+from seahorse.game.light_action import LightAction
 from seahorse.utils.custom_exceptions import MethodNotImplementedError
 import numpy as np
 
@@ -38,7 +39,7 @@ class MyPlayer(PlayerDivercite):
             return (self.getScore0(state), None)
         best_score = -np.inf
         best_action = None
-        possible_actions = state.generate_possible_heavy_actions()
+        possible_actions = state.generate_possible_heavy_actions() 
         for action in possible_actions:
             next_state = action.get_next_game_state()
             score, _ = self.minValue(next_state, alpha, beta, max_depth)
@@ -79,6 +80,14 @@ class MyPlayer(PlayerDivercite):
         """
 
         current_step = current_state.step
+
+
+        if current_step == 0:
+            data = {"piece": 'RC', "position": (5, 4)}
+            action = LightAction(data)
+            return (action)
+
+
         max_depth = current_step + 4
 
         best_score, best_action = self.maxValue(current_state,
