@@ -6,6 +6,7 @@ from seahorse.utils.custom_exceptions import MethodNotImplementedError
 # Custom imports
 import numpy as np
 from seahorse.game.light_action import LightAction
+from game_state_divercite import GameStateDivercite
 
 class MyPlayer(PlayerDivercite):
     """
@@ -27,6 +28,43 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
+        self.memory = dict()
+
+    def getScore(self, state: GameState):
+        opponentId = [player.get_id() for player in state.players if player.get_id() != self.get_id()][0]
+        score = state.scores[self.get_id()] - state.scores[opponentId]
+        
+        # if diversityState.get_player_id() == 1: # if enemy gets a diversity, punish minimax
+        #     if diversityState.check_divercite():
+        #         score -= 3
+        
+        # # if two cities can get a point from one ressorce, reward minimax
+        # positions = state.get_player_position(self)
+        # # if diversityState.get_neighbours(positions):
+        #     # if positions[0] + 1 and positions[1] + 1 == ?
+        return score
+
+    def getLayout(self, state: GameState):
+        layout = state.get_rep().get_env()
+        #convert the layout to a tuple for hashing!
+        return layout
+
+    def isNext(self, state0, state1):
+        env0 = self.getLayout(state0)
+        env1 = self.getLayout(state1)
+
+        pos0 = set(env0.keys())
+        pos1 = set(env1.keys())
+
+        x , y = list((pos1 - pos0))[0]
+
+        for i in [-1,1]:
+            if (x+i,y) in pos0:
+                return True
+            if (x,y+i) in pos0:
+                return True
+        
+        return False
 
     def alphaBetaSearch(self, state: GameState, alpha: float, beta: float, maxDepth: int):
         value,move = self.max_value(state, alpha, beta, maxDepth)
@@ -34,34 +72,68 @@ class MyPlayer(PlayerDivercite):
     
     def max_value(self, state: GameState, alpha: float, beta: float, maxDepth: int):
         if state.is_done() or state.get_step() == maxDepth:
-            return (state.get_player_score(self), None)
+            return (self.getScore(state), None)
         bestValue = self.MIN
         bestAction = None
         for action in state.generate_possible_heavy_actions():
             new_state = action.get_next_game_state()
-            value, _ = self.min_value(new_state, alpha, beta, maxDepth)
-            if value > bestValue:
-                bestValue = value
-                bestAction = action
-                alpha = max(alpha, bestValue)
-            if bestValue >= beta:
-                return (bestValue, bestAction)
+
+            # Check if the next state is next to the current state
+            passed = False
+            if state.get_step() < 25:
+                if self.isNext(state, new_state):
+                    passed = True
+            else:
+                passed = True
+
+            if passed:
+                # Check if the state is in memory
+                if self.getLayout(new_state) in self.memory:
+                    value = self.memory[self.getLayout(new_state)]
+                else:
+                    value, _ = self.min_value(new_state, alpha, beta, maxDepth)
+                    self.memory[self.getLayout(new_state)] = value
+                
+                if value > bestValue:
+                    bestValue = value
+                    bestAction = action
+                    alpha = max(alpha, bestValue)
+                if bestValue >= beta:
+                    return (bestValue, bestAction)
+
         return (bestValue, bestAction)
     
     def min_value(self, state: GameState, alpha:float, beta, maxDepth: int):
         if state.is_done() or state.get_step() == maxDepth:
-            return (state.get_player_score(self), None)
+            return (self.getScore(state), None)
         bestValue = self.MAX
         bestAction = None
         for action in state.generate_possible_heavy_actions():
             new_state = action.get_next_game_state()
-            value, _ = self.max_value(new_state, alpha, beta, maxDepth)
-            if value < bestValue:
-                bestValue = value
-                bestAction = action
-                beta = min(beta, bestValue)
-            if bestValue <= alpha:
-                return (bestValue, bestAction)
+
+            # Check if the next state is next to the current state
+            passed = False
+            if state.get_step() < 25:
+                if self.isNext(state, new_state):
+                    passed = True
+            else:
+                passed = True
+
+            if passed:
+                # Check if the state is in memory
+                if self.getLayout(new_state) in self.memory:
+                    value = self.memory[self.getLayout(new_state)]
+                else:
+                    value, _ = self.max_value(new_state, alpha, beta, maxDepth)
+                    self.memory[self.getLayout(new_state)] = value
+
+                if value < bestValue:
+                    bestValue = value
+                    bestAction = action
+                    beta = min(beta, bestValue)
+                if bestValue <= alpha:
+                    return (bestValue, bestAction)
+                
         return (bestValue, bestAction)
 
     def compute_action(self, current_state: GameState, remaining_time: int = 1e9, **kwargs) -> Action:
@@ -75,42 +147,23 @@ class MyPlayer(PlayerDivercite):
             Action: The best action as determined by minimax.
         """
         currentStep = current_state.get_step()
-        # maxDepth = currentStep + 4 # (24 vs 21)
 
-        # # (25 vs 21)    
-        # match currentStep:
-        #     case 0:
-        #         return LightAction({"piece":'RC', "position": (5, 4)})
-            
-        #     case _ if 0 < currentStep < 15:
-        #         maxDepth = currentStep + 4
-            
-        #     case _ if 15 <= currentStep < 20:
-        #         maxDepth = currentStep + 5
-            
-        #     case _ if 20 <= currentStep < 30:
-        #         maxDepth = currentStep + 6
-
-        #     case _:
-        #         maxDepth = 50
-
-
-        # (24 vs 19 greedy)
+        self.memory = dict()
         match currentStep:
-            case 0: # no need to think too much
+            case 0:
                 return LightAction({"piece":'RC', "position": (5, 4)})
             
             case _ if 0 < currentStep < 15:
-                maxDepth = currentStep + 3
+                maxDepth = currentStep + 5
             
             case _ if 15 <= currentStep < 20:
-                maxDepth = currentStep + 4
-            
-            case _ if 20 <= currentStep < 30:
                 maxDepth = currentStep + 6
             
-            case _:
+            case _ if 20 <= currentStep < 30:
                 maxDepth = currentStep + 7
+            
+            case _:
+                maxDepth = 40
 
         _, best_action = self.alphaBetaSearch(current_state, self.MIN, self.MAX, maxDepth)
 
@@ -118,9 +171,6 @@ class MyPlayer(PlayerDivercite):
     
 
 '''
-1. Alpha-Beta Pruning:
-Alpha-beta pruning is a technique that reduces the number of nodes evaluated by the minimax algorithm. It eliminates branches in the search tree that cannot possibly influence the final decision.
-
 2. Iterative Deepening:
 Iterative deepening combines the benefits of depth-first search and breadth-first search. It performs a series of depth-limited searches, gradually increasing the depth limit until the time runs out.
 
