@@ -52,7 +52,7 @@ class MyPlayer(PlayerDivercite):
     
     def addMemory(self, key, value):
         if len(self.memory) > self.memory_limit:
-            self.memory.popitem(next(iter(self.memory)))
+            self.memory.popitem()  # Remove the oldest item
         self.memory[key] = value
 
     def isNext(self, state0: GameState, state1: GameState):
@@ -93,13 +93,11 @@ class MyPlayer(PlayerDivercite):
                 passed = True
 
             if passed:
-                # Check if the state is in memory
                 layout = self.getLayout(new_state)
-                if layout in self.memory:
-                    value = self.memory[layout]
-                else:
+                value = self.memory.get(layout)
+                if value is None:
                     value, _ = self.min_value(new_state, alpha, beta, maxDepth)
-                    self.memory[layout] = value
+                    self.addMemory(layout, value)
                 
                 if value > bestValue:
                     bestValue = value
@@ -127,13 +125,11 @@ class MyPlayer(PlayerDivercite):
                 passed = True
 
             if passed:
-                # Check if the state is in memory
                 layout = self.getLayout(new_state)
-                if layout in self.memory:
-                    value = self.memory[layout]
-                else:
+                value = self.memory.get(layout)
+                if value is None:
                     value, _ = self.max_value(new_state, alpha, beta, maxDepth)
-                    self.memory[layout] = value
+                    self.addMemory(layout, value)
 
                 if value < bestValue:
                     bestValue = value
