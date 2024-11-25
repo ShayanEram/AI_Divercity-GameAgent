@@ -29,7 +29,7 @@ class MyPlayer(PlayerDivercite):
         """
         super().__init__(piece_type, name)
         self.memory = dict()
-        self.memory_limit = 1000
+        self.memory_limit = 5000
 
     def getScore(self, state: GameState):
         opponentId = [player.get_id() for player in state.players if player.get_id() != self.get_id()][0]
@@ -47,13 +47,49 @@ class MyPlayer(PlayerDivercite):
 
     def getLayout(self, state: GameState):
         layout = state.get_rep().get_env()
-        layout_str = str(sorted(layout.items()))
-        return layout_str
+        return layout
     
     def addMemory(self, key, value):
         if len(self.memory) > self.memory_limit:
             self.memory.popitem()  # Remove the oldest item
-        self.memory[key] = value
+        compressed_key = self.compress_state(key)
+        self.memory[compressed_key] = value
+    
+    def getMemory(self, key):
+        compressed_key = self.compress_state(key)
+        return self.memory.get(compressed_key)
+
+    def compress_state(self, state_dict):
+        layout_str = str(sorted(state_dict.items()))
+        compressed = []
+        count = 1
+        prev_char = layout_str[0]
+
+        for char in layout_str[1:]:
+            if char == prev_char:
+                count += 1
+            else:
+                compressed.append(f"{count}{prev_char}")
+                prev_char = char
+                count = 1
+
+        compressed.append(f"{count}{prev_char}")
+        return ''.join(compressed)
+
+    def decompress_state(self, compressed_str):
+        decompressed = []
+        count = ''
+        
+        for char in compressed_str:
+            if char.isdigit():
+                count += char
+            else:
+                decompressed.extend([char] * int(count))
+                count = ''
+        
+        layout_str = ''.join(decompressed)
+        items = eval(layout_str)
+        return dict(items)
 
     def isNext(self, state0: GameState, state1: GameState):
         env0 = state0.get_rep().get_env()
@@ -94,7 +130,7 @@ class MyPlayer(PlayerDivercite):
 
             if passed:
                 layout = self.getLayout(new_state)
-                value = self.memory.get(layout)
+                value = self.getMemory(layout)
                 if value is None:
                     value, _ = self.min_value(new_state, alpha, beta, maxDepth)
                     self.addMemory(layout, value)
@@ -126,7 +162,7 @@ class MyPlayer(PlayerDivercite):
 
             if passed:
                 layout = self.getLayout(new_state)
-                value = self.memory.get(layout)
+                value = self.getMemory(layout)
                 if value is None:
                     value, _ = self.max_value(new_state, alpha, beta, maxDepth)
                     self.addMemory(layout, value)
@@ -151,8 +187,8 @@ class MyPlayer(PlayerDivercite):
             Action: The best action as determined by minimax.
         """
         currentStep = current_state.get_step()
-
         self.memory = dict()
+
         match currentStep:
             case 0:
                 return LightAction({"piece":'RC', "position": (5, 4)})
