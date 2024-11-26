@@ -107,6 +107,17 @@ class MyPlayer(PlayerDivercite):
                 return True
         
         return False
+    
+    def heuristic_evaluation(self, state: GameState, action) -> float:
+        new_state = action.get_next_game_state()
+        score = self.getScore(new_state)
+        return score
+
+    def sort_moves(self, state: GameState, actions) -> list:
+        scored_moves = [(action, self.heuristic_evaluation(state, action)) for action in actions]
+        scored_moves.sort(key=lambda x: x[1], reverse=True)  # Sort moves in descending order of their scores
+        sorted_actions = [action for action, score in scored_moves]
+        return sorted_actions
 
     def alphaBetaSearch(self, state: GameState, alpha: float, beta: float, maxDepth: int):
         value,move = self.max_value(state, alpha, beta, maxDepth)
@@ -117,7 +128,9 @@ class MyPlayer(PlayerDivercite):
             return (self.getScore(state), None)
         bestValue = self.MIN
         bestAction = None
-        for action in state.generate_possible_heavy_actions():
+        actions = state.generate_possible_heavy_actions()
+        sorted_actions = self.sort_moves(state, actions)  # Sort the moves
+        for action in sorted_actions:
             new_state = action.get_next_game_state()
 
             # Check if the next state is next to the current state
@@ -149,7 +162,9 @@ class MyPlayer(PlayerDivercite):
             return (self.getScore(state), None)
         bestValue = self.MAX
         bestAction = None
-        for action in state.generate_possible_heavy_actions():
+        actions = state.generate_possible_heavy_actions()
+        sorted_actions = self.sort_moves(state, actions)  # Sort the moves
+        for action in sorted_actions:
             new_state = action.get_next_game_state()
 
             # Check if the next state is next to the current state
