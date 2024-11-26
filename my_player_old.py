@@ -26,7 +26,6 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
-        self._table = dict()
 
     def getScore0(self, state: GameState):
 
@@ -35,50 +34,21 @@ class MyPlayer(PlayerDivercite):
 
         return state.scores[self.get_id()] - state.scores[opponentId]
 
-    def isNext(self, state1, state2):
-
-        env1 = state1.get_rep().get_env()
-        env2 = state2.get_rep().get_env()
-
-        pos2 = set(env2.keys())
-        pos1 = set(env1.keys())
-
-        x , y = list((pos2 - pos1))[0]
-
-        for (i,j) in [(i,j) for i in [-1,0,1] for j in [-1,1,0]]:
-            if (x+i,y+j) in self._positions:
-                return True
-        
-        return False
-                 
-
     def maxValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
         if state.is_done() or state.step == max_depth:
             return (self.getScore0(state), None)
         best_score = -np.inf
         best_action = None
-        possible_actions = state.generate_possible_heavy_actions()
+        possible_actions = state.generate_possible_heavy_actions() 
         for action in possible_actions:
-
             next_state = action.get_next_game_state()
-    
-            if self.isNext(state, next_state) or state.step > 35:
-
-                # if next_state in self._table:
-                #     score = self._table[next_state]
-
-                # else:
-                score, _ = self.minValue(next_state, alpha, beta, max_depth)
-                #     self._table[next_state] = score  
-
-                if score > best_score:
-                    best_score = score
-                    best_action = action
-                    alpha = max(alpha, best_score)
-                if best_score >= beta:
-                    return (best_score, best_action)                
-
-                
+            score, _ = self.minValue(next_state, alpha, beta, max_depth)
+            if score > best_score:
+                best_score = score
+                best_action = action
+                alpha = max(alpha, best_score)
+            if best_score >= beta:
+                return (best_score, best_action)
         return (best_score, best_action)
 
     def minValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
@@ -88,26 +58,14 @@ class MyPlayer(PlayerDivercite):
         best_action = None
         possible_actions = state.generate_possible_heavy_actions()
         for action in possible_actions:
-
             next_state = action.get_next_game_state()
-            
-            if self.isNext(state, next_state) or state.step > 35:
-
-                # if next_state in self._table:
-                #     score = self._table[next_state]
-
-                # else:
-                score, _ = self.maxValue(next_state, alpha, beta, max_depth)
-                #     self._table[next_state] = score
-                
-                if score < best_score:
-                    best_score = score
-                    best_action = action
-                    beta = min(beta, best_score)
-                if best_score <= alpha:
-                    return (best_score, best_action)
-                
-                
+            score, _ = self.maxValue(next_state, alpha, beta, max_depth)
+            if score < best_score:
+                best_score = score
+                best_action = action
+                beta = min(beta, best_score)
+            if best_score <= alpha:
+                return (best_score, best_action)
         return (best_score, best_action)
 
     def compute_action(self, current_state: GameState, remaining_time: int = 1e9, **kwargs) -> Action:
@@ -122,7 +80,6 @@ class MyPlayer(PlayerDivercite):
         """
 
         current_step = current_state.step
-        self._positions = set(current_state.get_rep().get_env().keys())
 
 
         if current_step == 0:
@@ -131,12 +88,9 @@ class MyPlayer(PlayerDivercite):
             return (action)
 
 
+        max_depth = current_step + 4
 
-        # self._table = dict()
-        
-        max_depth = current_step + 5
-
-        _, best_action = self.maxValue(current_state,
+        best_score, best_action = self.maxValue(current_state,
                                                 alpha=-np.inf,
                                                 beta=np.inf,
                                                 max_depth=max_depth)

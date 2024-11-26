@@ -159,7 +159,7 @@ class MyPlayer(PlayerDivercite):
                     (max_depth-current_step) % 2
 
         else:
-            if current_step == threshold:
+            if current_step == threshold or current_step == threshold + 1:
                 self._table = dict()
             max_depth = 40
 
