@@ -1,1 +1,1 @@
-python main_divercite.py -t local random_player_divercite.py minimax_player.py -r -g
+python main_divercite.py -t local my_player.py minimax_player.py -r -g
