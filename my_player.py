@@ -103,23 +103,31 @@ class MyPlayer(PlayerDivercite):
 
     # Heuristic functions .........................................................................................
     def getScore(self, state: GameState):
-        opponentId = self.get_opponent_id(state)
-        return state.scores[self.get_id()] - state.scores[opponentId]
-        # return self.combined_heuristic(state, self.get_id())
+        return self.combined_heuristic(state, self.get_id())
 
     # def heuristic_evaluation(self, state: GameState, action) -> float:
     #     new_state = action.get_next_game_state()
     #     score = self.getScore(new_state)
     #     return score
 
-    # def diversite_bonus_heuristic(self, state: GameState, player_id: str):
-    #     score = 0
-    #     for pos, piece in state.get_rep().get_env().items():
-    #         if piece == 'city' and state.get_rep().get_player(pos) == player_id:
-    #             adjacent_resources = self.get_adjacent_resources(pos, state)
-    #             if len(set(adjacent_resources)) == 4:
-    #                 score += 5  # Diversité bonus points
-    #     return score
+    def getPlayerScore(self, state: GameState):
+        opponentId = self.get_opponent_id(state)
+        return state.scores[self.get_id()] - state.scores[opponentId]
+
+    def diversite_bonus_heuristic(self, state: GameState, player_id: str):
+        score = 0
+        for pos, piece in self.getLayout(state).items():
+            
+            if state.check_divercite(pos):
+                # if piece.get_owner_id() == self.get_id():
+                score += 5
+                # if piece.get_owner_id() != self.get_opponent_id():
+                #     score -= 5
+            # if piece == 'city' and state.get_rep().get_player(pos) == player_id:
+            #     adjacent_resources = self.get_adjacent_resources(pos, state)
+            #     if len(set(adjacent_resources)) == 4:
+                    # score += 5  # Diversité bonus points
+        return score
 
     # def resource_color_matching_heuristic(self, state: GameState, player_id: str):
     #     score = 0
@@ -165,22 +173,25 @@ class MyPlayer(PlayerDivercite):
     #                 score += 3  # Disrupt by placing a fourth resource not forming Diversité
     #     return score
     
-    # def combined_heuristic(self, state: GameState, player_id: str):
-    #     diversite_score = self.diversite_bonus_heuristic(state, player_id)
-    #     color_matching_score = self.resource_color_matching_heuristic(state, player_id)
-    #     placement_advantage_score = self.resource_placement_advantage_heuristic(state, player_id)
-    #     central_control_score = self.central_control_heuristic(state, player_id)
-    #     disruption_score = self.opponent_disruption_heuristic(state, player_id)
+    def combined_heuristic(self, state: GameState, player_id: str):
+        player_score = self.getPlayerScore(state)
+        diversite_score = self.diversite_bonus_heuristic(state, player_id)
+        # color_matching_score = self.resource_color_matching_heuristic(state, player_id)
+        # placement_advantage_score = self.resource_placement_advantage_heuristic(state, player_id)
+        # central_control_score = self.central_control_heuristic(state, player_id)
+        # disruption_score = self.opponent_disruption_heuristic(state, player_id)
 
-    #     # Combine scores with weights
-    #     combined_score = (
-    #         1.5 * diversite_score +
-    #         1.0 * color_matching_score +
-    #         0.8 * placement_advantage_score +
-    #         1.0 * central_control_score +
-    #         1.2 * disruption_score
-    #     )
-    #     return combined_score
+        # Combine scores with weights
+        combined_score = (
+            player_score +
+            # 1.5 * 
+            diversite_score #+
+            # 1.0 * color_matching_score +
+            # 0.8 * placement_advantage_score +
+            # 1.0 * central_control_score +
+            # 1.2 * disruption_score
+        )
+        return combined_score
 
     # Alpha-Beta Search .............................................................................................
     def alphaBetaSearch(self, state: GameState, alpha: float, beta: float, maxDepth: int):
