@@ -46,6 +46,9 @@ class MyPlayer(PlayerDivercite):
     
     def get_opponent_id(self, state: GameState):
         return [player.get_id() for player in state.players if player.get_id() != self.get_id()][0]
+    
+    def startCities(self, state: GameState):
+        picesLeft = state.compute_players_pieces_left(self.get_id())
 
     # def get_adjacent_resources(self, pos, state: GameState):
     #     x, y = pos
@@ -120,13 +123,9 @@ class MyPlayer(PlayerDivercite):
             
             if state.check_divercite(pos):
                 # if piece.get_owner_id() == self.get_id():
-                score += 5
+                score += 2
                 # if piece.get_owner_id() != self.get_opponent_id():
                 #     score -= 5
-            # if piece == 'city' and state.get_rep().get_player(pos) == player_id:
-            #     adjacent_resources = self.get_adjacent_resources(pos, state)
-            #     if len(set(adjacent_resources)) == 4:
-                    # score += 5  # Diversité bonus points
         return score
 
     # def resource_color_matching_heuristic(self, state: GameState, player_id: str):
@@ -155,13 +154,13 @@ class MyPlayer(PlayerDivercite):
     #                         score -= 1  # Penalize if the resource helps the opponent
     #     return score
     
-    # def central_control_heuristic(self, state: GameState, player_id: str):
-    #     central_positions = [(4, 4), (4, 5), (5, 4), (5, 5)]  # Example central positions
-    #     score = 0
-    #     for pos in central_positions:
-    #         if state.get_rep().get_env().get(pos) == player_id:
-    #             score += 2  # Prioritize central control
-    #     return score
+    def central_control_heuristic(self, state: GameState, player_id: str):
+        central_positions = [(4, 4), (4, 5), (5, 4), (5, 5)]  # Example central positions
+        score = 0
+        for pos in central_positions:
+            if state.get_rep().get_env().get(pos) == player_id:
+                score += 2  # Prioritize central control
+        return score
 
     # def opponent_disruption_heuristic(self, state: GameState, player_id: str):
     #     score = 0
@@ -183,8 +182,7 @@ class MyPlayer(PlayerDivercite):
 
         # Combine scores with weights
         combined_score = (
-            player_score +
-            # 1.5 * 
+            player_score + 
             diversite_score #+
             # 1.0 * color_matching_score +
             # 0.8 * placement_advantage_score +
@@ -199,6 +197,8 @@ class MyPlayer(PlayerDivercite):
         return (value, move)
     
     def max_value(self, state: GameState, alpha: float, beta: float, maxDepth: int):
+        # if remaining_time < 100.0:
+        #     maxDepth = currentStep + 3
         if state.is_done() or state.get_step() == maxDepth:
             return (self.getScore(state), None)
         bestValue = self.MIN
@@ -225,6 +225,8 @@ class MyPlayer(PlayerDivercite):
         return (bestValue, bestAction)
     
     def min_value(self, state: GameState, alpha:float, beta, maxDepth: int):
+        # if remaining_time < 100.0:
+        #     maxDepth = currentStep + 3
         if state.is_done() or state.get_step() == maxDepth:
             return (self.getScore(state), None)
         bestValue = self.MAX
@@ -263,10 +265,10 @@ class MyPlayer(PlayerDivercite):
                 maxDepth = currentStep + 5
             
             case _ if 15 <= currentStep < 20:
-                maxDepth = currentStep + 6
+                maxDepth = currentStep + 5 # should be 6
             
             case _ if 20 <= currentStep < 30:
-                maxDepth = currentStep + 6
+                maxDepth = currentStep + 5 # should be 6
             
             case _:
                 maxDepth = 40
