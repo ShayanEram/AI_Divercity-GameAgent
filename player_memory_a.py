@@ -6,6 +6,7 @@ from game_state_divercite import GameStateDivercite
 from seahorse.game.light_action import LightAction
 from seahorse.utils.custom_exceptions import MethodNotImplementedError
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class MyPlayer(PlayerDivercite):
@@ -26,31 +27,51 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
-        self._table = dict()
+        self.memory_limit = 500000
+        self.memory = dict()
+
+        self.callList = []
+        self.stepList = []
+        self.hitList = []
+
+
+
+# Memory........................................................................................................................
+
+    def addMemory(self, key, value):
+        if len(self.memory) > self.memory_limit:
+            (k:=next(iter(self.memory)), self.memory.pop(k))  
+        self.memory[key] = value
+        
+    def getMemory(self, key):
+        self.memoryCount += 1
+
+        # score = self.memory.pop(key)
+        # self.memory[key] = score
+        # return score
+    
+        return self.memory.get(key)
+
+
+    def getLayout(self, state: GameState, toString = False):
+        if toString:    
+            return hash(str(state.get_rep()) + str(state.players_pieces_left[self.get_id()]))
+        else:
+            return state.get_rep().get_env()        
+    
+    # Score...............................................................
 
     def getScore0(self, state: GameState):
-    
+
         opponentId = [player.get_id()
-                    for player in state.players if player.get_id() != self.get_id()][0]
+                      for player in state.players if player.get_id() != self.get_id()][0]
 
         return state.scores[self.get_id()] - state.scores[opponentId]
-
-        
-
+    
     def isValid(self, state1, state2):
 
-        if state2.step > 35:
+        if state2.step > 30:
             return True
-
-        
-        if state1.step <= 10 and state1.step == self._currentStep:
-            piecesLeft = state2.players_pieces_left[self.get_id()]
-            scorePieces = 0
-            for piece in piecesLeft:
-                if piece[1] == 'R':
-                    scorePieces+=piecesLeft[piece]
-            if scorePieces < 12:
-                return False
 
         env1 = state1.get_rep().get_env()
         env2 = state2.get_rep().get_env()
@@ -79,7 +100,15 @@ class MyPlayer(PlayerDivercite):
     
             if self.isValid(state, next_state):
 
-                score, _ = self.minValue(next_state, alpha, beta, max_depth)
+                layout = self.getLayout(next_state, toString = True)
+                if layout in self.memory:
+                    score = self.getMemory(layout)
+                else:
+
+                    self.callCount += 1
+
+                    score, _ = self.minValue(next_state, alpha, beta, max_depth)
+                    self.addMemory(layout, score)                
 
                 if score > best_score:
                     best_score = score
@@ -103,9 +132,15 @@ class MyPlayer(PlayerDivercite):
             
             if self.isValid(state, next_state):
 
-                
-                score, _ = self.maxValue(next_state, alpha, beta, max_depth)
-        
+                layout = self.getLayout(next_state, toString = True)
+                if layout in self.memory:
+                    score = self.getMemory(layout)
+                else:
+                    
+                    self.callCount += 1
+
+                    score, _ = self.maxValue(next_state, alpha, beta, max_depth)
+                    self.addMemory(layout, score)         
                 
                 if score < best_score:
                     best_score = score
@@ -128,14 +163,13 @@ class MyPlayer(PlayerDivercite):
             Action: The best action as determined by minimax.
         """
 
+        self.memoryCount = 0
+        self.callCount = 0
 
         
 
         current_step = current_state.step
-        self._currentStep = current_step
-
         self._positions = set(current_state.get_rep().get_env().keys())
-
 
         if current_step == 0:
             data = {"piece": 'RC', "position": (5, 4)}
@@ -143,16 +177,34 @@ class MyPlayer(PlayerDivercite):
             return (action)
 
 
+        self.memory = dict()
+        max_depth = current_step + 4
 
-        
-        max_depth = current_step + 5
-
-        _, best_action = self.maxValue(current_state,
+        best_score, best_action = self.maxValue(current_state,
                                                 alpha=-np.inf,
                                                 beta=np.inf,
                                                 max_depth=max_depth)
 
-        return best_action
+        
+        print(self.memoryCount)
 
-        # TODO
-        raise MethodNotImplementedError()
+
+
+        self.stepList.append(current_step)
+        self.callList.append(self.callCount)
+        self.hitList.append(self.memoryCount)
+
+        if current_step in {38,39}:
+            plt.plot(self.stepList, self.callList)
+            
+            plt.title("Nombre d'appels récursifs par étape \n Agent ´player_memory´")
+            
+            plt.show()        
+
+            plt.plot(self.stepList, self.hitList)
+            
+            plt.title("Nombre d'appels à la mémoire par étape \n Agent ´player_memory´")
+            
+            plt.show()        
+        
+        return best_action

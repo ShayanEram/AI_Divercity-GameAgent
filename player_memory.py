@@ -26,7 +26,35 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
+        self.memory_limit = 500000
+        self.memory = dict()
 
+
+
+# Memory........................................................................................................................
+
+    def addMemory(self, key, value):
+        if len(self.memory) > self.memory_limit:
+            (k:=next(iter(self.memory)), self.memory.pop(k))  
+        self.memory[key] = value
+        
+    def getMemory(self, key):
+        self.memoryCount += 1
+
+        # score = self.memory.pop(key)
+        # self.memory[key] = score
+        # return score
+    
+        return self.memory.get(key)
+
+
+    def getLayout(self, state: GameState, toString = False):
+        if toString:            
+            return hash(str(state.get_rep()))
+        else:
+            return state.get_rep().get_env()        
+    
+    # Score...............................................................
 
     def getScore0(self, state: GameState):
 
@@ -34,8 +62,13 @@ class MyPlayer(PlayerDivercite):
                       for player in state.players if player.get_id() != self.get_id()][0]
 
         return state.scores[self.get_id()] - state.scores[opponentId]
+    
+    # Valid States.................................................................................
+    
+    def isValid(self, state1, state2):
 
-    def isNext(self, state1, state2):
+        if state2.step > 30:
+            return True
 
         env1 = state1.get_rep().get_env()
         env2 = state2.get_rep().get_env()
@@ -62,14 +95,15 @@ class MyPlayer(PlayerDivercite):
 
             next_state = action.get_next_game_state()
     
-            if self.isNext(state, next_state) or state.step > 35:
+            if self.isValid(state, next_state):
 
-                # if next_state in self._table:
-                #     score = self._table[next_state]
+                layout = self.getLayout(next_state, toString = True)
+                if layout in self.memory:
+                    score = self.getMemory(layout)
+                else:
 
-                # else:
-                score, _ = self.minValue(next_state, alpha, beta, max_depth)
-                #     self._table[next_state] = score  
+                    score, _ = self.minValue(next_state, alpha, beta, max_depth)
+                    self.addMemory(layout, score)                
 
                 if score > best_score:
                     best_score = score
@@ -91,14 +125,16 @@ class MyPlayer(PlayerDivercite):
 
             next_state = action.get_next_game_state()
             
-            if self.isNext(state, next_state) or state.step > 35:
+            if self.isValid(state, next_state):
 
-                # if next_state in self._table:
-                #     score = self._table[next_state]
+                layout = self.getLayout(next_state, toString = True)
+                if layout in self.memory:
+                    score = self.getMemory(layout)
+                else:
+                
 
-                # else:
-                score, _ = self.maxValue(next_state, alpha, beta, max_depth)
-                #     self._table[next_state] = score
+                    score, _ = self.maxValue(next_state, alpha, beta, max_depth)
+                    self.addMemory(layout, score)         
                 
                 if score < best_score:
                     best_score = score
@@ -121,9 +157,10 @@ class MyPlayer(PlayerDivercite):
             Action: The best action as determined by minimax.
         """
 
+        self.memoryCount = 0
+        
         current_step = current_state.step
         self._positions = set(current_state.get_rep().get_env().keys())
-
 
         if current_step == 0:
             data = {"piece": 'RC', "position": (5, 4)}
@@ -131,9 +168,7 @@ class MyPlayer(PlayerDivercite):
             return (action)
 
 
-
-        
-        
+        self.memory = dict()
         max_depth = current_step + 4
 
         _, best_action = self.maxValue(current_state,
@@ -141,4 +176,7 @@ class MyPlayer(PlayerDivercite):
                                                 beta=np.inf,
                                                 max_depth=max_depth)
 
+        
+        # print(self.memoryCount)
+        
         return best_action
