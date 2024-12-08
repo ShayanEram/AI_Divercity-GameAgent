@@ -145,9 +145,6 @@ class MyPlayer(PlayerDivercite):
             if totalRessources < 12:
                 return False
             
-        # if (state2.step < 30) and (state1.step - self.current_step) % 2 == 0:
-        #     if self.getDivercitePieces(state2) < 4:
-        #         return False
 
 
         env1 = state1.get_rep().get_env()

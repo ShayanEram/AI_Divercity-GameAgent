@@ -122,7 +122,7 @@ class MyPlayer(PlayerDivercite):
         
         step = self.current_step
         
-        if step < 12 : 
+        if step < 16 : 
             return self.getDeltaScore(state) - self.getDivercitePenalty(state) - self.getDistancesCites(state)
         if step < 25 : 
             return self.getDeltaScore(state) - self.getDivercitePenalty(state)
@@ -165,10 +165,7 @@ class MyPlayer(PlayerDivercite):
             if totalRessources < 12:
                 return False
             
-        # if (state2.step < 30) and (state1.step - self.current_step) % 2 == 0:
-        #     if self.getDivercitePieces(state2) < 4:
-        #         return False
-
+    
 
         env1 = state1.get_rep().get_env()
         env2 = state2.get_rep().get_env()
@@ -194,12 +191,8 @@ class MyPlayer(PlayerDivercite):
         
         state_step = state.step
         
-        if state_step < 8 and state_step == self.current_step:
-            possible_actions = list(action for action in state.generate_possible_heavy_actions())
-            np.random.shuffle(possible_actions)
-        else:
-            possible_actions = state.generate_possible_heavy_actions()
-        
+
+        possible_actions = state.generate_possible_heavy_actions()        
 
         for action in possible_actions:
 
