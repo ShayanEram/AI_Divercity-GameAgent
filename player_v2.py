@@ -1,3 +1,7 @@
+# Shayan Eram - 2084174 
+# Raphaël Tournier – 2409579
+
+
 from player_divercite import PlayerDivercite
 from board_divercite import BoardDivercite
 from seahorse.game.action import Action
@@ -56,25 +60,6 @@ class MyPlayer(PlayerDivercite):
             return state.get_rep().get_env()        
     
     # Score...............................................................
-
-    def getDistancesCites(self, state):
-        
-        penalty = 0
-        
-        board = self.getLayout(state)
-        for pos in board:
-            if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                color = board[pos].get_type()[0]
-                x,y = pos
-                neighbors = state.get_rep().get_neighbours(x,y)
-                colorCount = 0
-                for k,v in neighbors.items():
-                    if v[0] != 'EMPTY':
-                        if v[0].get_type()[0] == color:
-                            colorCount+=1
-                penalty += max(0,colorCount-1)
-        
-        return penalty
             
     
     def getDivercitePieces(self, state: GameState):
@@ -84,7 +69,6 @@ class MyPlayer(PlayerDivercite):
         for piece in pieces_left:
             if piece[1] == 'R':
                 divercite_pieces += (pieces_left[piece] > 0)
-                # divercite_pieces += (pieces_left[piece]//2)
         return divercite_pieces    
     
     def getDivercitePenalty(self, state: GameState):
