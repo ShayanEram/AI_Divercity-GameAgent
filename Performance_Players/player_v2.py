@@ -1,3 +1,7 @@
+# Shayan Eram - 2084174 
+# Raphaël Tournier – 2409579
+
+
 from player_divercite import PlayerDivercite
 from board_divercite import BoardDivercite
 from seahorse.game.action import Action
@@ -56,42 +60,6 @@ class MyPlayer(PlayerDivercite):
             return state.get_rep().get_env()        
     
     # Score...............................................................
-
-    def getDivercitePenalty(self, state: GameState):
-        
-        penalty = 0
-        
-        board = self.getLayout(state)
-        
-        for color in {'R','G','B','Y'}:
-            for pos in board:
-                if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                    x,y = pos
-                    neighbors = state.get_rep().get_neighbours(x,y)
-                    colorCount = 0
-                    for k,v in neighbors.items():
-                        if v[0] != 'EMPTY':
-                            if v[0].get_type()[0] == color:
-                                colorCount+=1
-                    penalty += max(0,colorCount-1)
-        
-        return penalty
-
-    def getDistancesCites(self, state):
-        
-        positions = []
-        sumDistances = 0
-        
-        board = self.getLayout(state)
-        for pos in board:
-            if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                positions.append(np.array(pos))
-
-        for i in range(len(positions)):
-            for j in range(i+1, len(positions)):
-                sumDistances += np.linalg.norm(positions[i] - positions[j])
-        
-        return sumDistances
             
     
     def getDivercitePieces(self, state: GameState):
@@ -103,7 +71,26 @@ class MyPlayer(PlayerDivercite):
                 divercite_pieces += (pieces_left[piece] > 0)
         return divercite_pieces    
     
-                   
+    def getDivercitePenalty(self, state: GameState):
+        
+        penalty = 0
+        
+        board = self.getLayout(state)
+        for pos in board:
+            if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
+                color = board[pos].get_type()[0]
+                x,y = pos
+                neighbors = state.get_rep().get_neighbours(x,y)
+                colorCount = 0
+                for k,v in neighbors.items():
+                    if v[0] != 'EMPTY':
+                        if v[0].get_type()[0] == color:
+                            colorCount+=1
+                penalty += max(0,colorCount-1)
+        
+        return penalty
+
+                    
 
     def getDeltaScore(self, state: GameState):
 
@@ -117,8 +104,6 @@ class MyPlayer(PlayerDivercite):
         
         step = self.current_step
         
-        if step < 16 : 
-            return self.getDeltaScore(state) - self.getDivercitePenalty(state) - self.getDistancesCites(state)
         if step < 25 : 
             return self.getDeltaScore(state) - self.getDivercitePenalty(state)
         elif step < 30 :
@@ -136,7 +121,7 @@ class MyPlayer(PlayerDivercite):
         if state2.step > 30:
             return True
         
-        if state1.step < 4 and state1.step == self.current_step:            
+        if state1.step < 3 and state1.step == self.current_step:            
                 
             env1 = self.getLayout(state1)
             env2 = self.getLayout(state2)
@@ -151,7 +136,7 @@ class MyPlayer(PlayerDivercite):
             else:
                 return False  
         
-        if (state1.step - self.current_step) % 2 == 0 and state1.step < 16:
+        if (state1.step - self.current_step) % 2 == 0 and state1.step < 15:
             pieces_left = state2.players_pieces_left[self.get_id()]
             totalRessources = 0
             for piece in pieces_left:
@@ -160,7 +145,7 @@ class MyPlayer(PlayerDivercite):
             if totalRessources < 12:
                 return False
             
-    
+
 
         env1 = state1.get_rep().get_env()
         env2 = state2.get_rep().get_env()
@@ -186,8 +171,12 @@ class MyPlayer(PlayerDivercite):
         
         state_step = state.step
         
-
-        possible_actions = state.generate_possible_heavy_actions()        
+        if state_step < 8 and state_step == self.current_step:
+            possible_actions = list(action for action in state.generate_possible_heavy_actions())
+            np.random.shuffle(possible_actions)
+        else:
+            possible_actions = state.generate_possible_heavy_actions()
+        
 
         for action in possible_actions:
 

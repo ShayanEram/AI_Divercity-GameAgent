@@ -28,7 +28,6 @@ class MyPlayer(PlayerDivercite):
         super().__init__(piece_type, name)
         self.memory_limit = 500000
         self.memory = dict()
-        self.color = 'B'
 
 
 
@@ -51,116 +50,25 @@ class MyPlayer(PlayerDivercite):
 
     def getLayout(self, state: GameState, toString = False):
         if toString:            
-            return hash(str(state.get_rep()) + str(state.players_pieces_left[self.get_id()]))
+            return hash(str(state.get_rep()))
         else:
             return state.get_rep().get_env()        
     
     # Score...............................................................
 
-    def getDivercitePenalty(self, state: GameState):
-        
-        penalty = 0
-        
-        board = self.getLayout(state)
-        
-        for color in {'R','G','B','Y'}:
-            for pos in board:
-                if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                    x,y = pos
-                    neighbors = state.get_rep().get_neighbours(x,y)
-                    colorCount = 0
-                    for k,v in neighbors.items():
-                        if v[0] != 'EMPTY':
-                            if v[0].get_type()[0] == color:
-                                colorCount+=1
-                    penalty += max(0,colorCount-1)
-        
-        return penalty
-
-    def getDistancesCites(self, state):
-        
-        positions = []
-        sumDistances = 0
-        
-        board = self.getLayout(state)
-        for pos in board:
-            if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                positions.append(np.array(pos))
-
-        for i in range(len(positions)):
-            for j in range(i+1, len(positions)):
-                sumDistances += np.linalg.norm(positions[i] - positions[j])
-        
-        return sumDistances
-            
-    
-    def getDivercitePieces(self, state: GameState):
-
-        pieces_left = state.players_pieces_left[self.get_id()]
-        divercite_pieces = 0
-        for piece in pieces_left:
-            if piece[1] == 'R':
-                divercite_pieces += (pieces_left[piece] > 0)
-        return divercite_pieces    
-    
-                   
-
-    def getDeltaScore(self, state: GameState):
+    def getScore0(self, state: GameState):
 
         opponentId = [player.get_id()
                       for player in state.players if player.get_id() != self.get_id()][0]
-        return state.scores[self.get_id()] - state.scores[opponentId]        
-        
-            
 
-    def getScore(self, state):
-        
-        step = self.current_step
-        
-        if step < 16 : 
-            return self.getDeltaScore(state) - self.getDivercitePenalty(state) - self.getDistancesCites(state)
-        if step < 25 : 
-            return self.getDeltaScore(state) - self.getDivercitePenalty(state)
-        elif step < 30 :
-            return self.getDeltaScore(state) + self.getDivercitePieces(state)
-        else:
-            return self.getDeltaScore(state) 
-
-
-
-
+        return state.scores[self.get_id()] - state.scores[opponentId]
+    
     # Valid States.................................................................................
     
     def isValid(self, state1, state2):
 
         if state2.step > 30:
             return True
-        
-        if state1.step < 4 and state1.step == self.current_step:            
-                
-            env1 = self.getLayout(state1)
-            env2 = self.getLayout(state2)
-
-            pos2 = set(env2.keys())
-            pos1 = set(env1.keys())
-
-            x , y = list((pos2 - pos1))[0]
-            
-            if (x,y) in [(3,4),(4,5),(5,4),(4,3)]:
-                return True   
-            else:
-                return False  
-        
-        if (state1.step - self.current_step) % 2 == 0 and state1.step < 16:
-            pieces_left = state2.players_pieces_left[self.get_id()]
-            totalRessources = 0
-            for piece in pieces_left:
-                if piece[1] == 'R':
-                    totalRessources += pieces_left[piece]
-            if totalRessources < 12:
-                return False
-            
-    
 
         env1 = state1.get_rep().get_env()
         env2 = state2.get_rep().get_env()
@@ -176,19 +84,13 @@ class MyPlayer(PlayerDivercite):
         
         return False
                  
-    # Minimax......................................................................................
 
     def maxValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
         if state.is_done() or state.step == max_depth:
-            return (self.getScore(state), None)
+            return (self.getScore0(state), None)
         best_score = -np.inf
         best_action = None
-        
-        state_step = state.step
-        
-
-        possible_actions = state.generate_possible_heavy_actions()        
-
+        possible_actions = state.generate_possible_heavy_actions()
         for action in possible_actions:
 
             next_state = action.get_next_game_state()
@@ -215,7 +117,7 @@ class MyPlayer(PlayerDivercite):
 
     def minValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
         if state.is_done() or state.step == max_depth:
-            return (self.getScore(state), None)
+            return (self.getScore0(state), None)
         best_score = np.inf
         best_action = None
         possible_actions = state.generate_possible_heavy_actions()
@@ -258,29 +160,18 @@ class MyPlayer(PlayerDivercite):
         self.memoryCount = 0
         
         current_step = current_state.step
-        self.current_step= current_step
         self._positions = set(current_state.get_rep().get_env().keys())
 
         if current_step == 0:
             data = {"piece": 'RC', "position": (5, 4)}
             action = LightAction(data)
-            self.color = 'W'
             return (action)
-            
-        if current_step < 24  :
-            self.memory = dict()
-            max_depth = current_step + 4
-        elif current_step < 30  :
-            self.memory = dict()
-            max_depth = current_step + 5
-        elif current_step in {30,31}:
-            self.memory = dict()
-            max_depth = 40
-        else:
-            max_depth = 40
 
 
-        best_score, best_action = self.maxValue(current_state,
+        self.memory = dict()
+        max_depth = current_step + 4
+
+        _, best_action = self.maxValue(current_state,
                                                 alpha=-np.inf,
                                                 beta=np.inf,
                                                 max_depth=max_depth)
