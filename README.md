@@ -21,7 +21,7 @@ Resources placed on the board are neutral and benefit all surrounding cities, re
 
 In case of a tie in score, players are differentiated based on their number of Divercités. If this is also tied, we count the number of cities surrounded by four resources of the same color, then those with three resources, and so on until a winner is determined. If a perfect tie occurs, the first player wins since the second player is considered to have an advantage.
 
-## Inastructions
+## Instructions
 
 The project is based on the open-source package seahorse. You can support it by giving a star on its GitHub page. To start a game, you must first install seahorse using the following command:
 ```bash
