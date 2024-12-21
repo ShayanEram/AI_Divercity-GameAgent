@@ -1,4 +1,4 @@
-# Diversity_game_agent_AI
+# Divercity_game_agent_AI
 
 ## Rules
 **Divercité** is a strategic game where two players compete to accumulate the most points by placing their pieces (called cities) on a board, surrounded by resources of different colors. The aim of the game is to create configurations that maximize points according to several rules.
