@@ -26,6 +26,7 @@ In case of a tie in score, players are differentiated based on their number of D
 The project is based on the open-source package seahorse. You can support it by giving a star on its GitHub page. To start a game, you must first install seahorse using the following command:
 ```bash
 $ pip install seahorse colorama
+$ pip install -r requirements.txt
 ```
 
 Next, several execution modes are available via the presence of arguments. For example, `-r` allows you to save a game in a JSON file. To get the description of all the arguments, execute the following command:
@@ -65,4 +66,6 @@ $ python main_divercite.py -t human_vs_computer random_player_divercite.py
 ```
 
 ## Play
-python main_divercite.py -t local my_player.py greedy_player_divercite.py -g (from command.txt)
+```bash
+$ python main_divercite.py -t local my_player.py greedy_player_divercite.py -g
+```
