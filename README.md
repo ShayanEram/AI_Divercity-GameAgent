@@ -65,4 +65,4 @@ $ python main_divercite.py -t human_vs_computer random_player_divercite.py
 ```
 
 ## Play
-python main_divercite.py -t local my_player.py greedy_player_divercite.py -r -g
+python main_divercite.py -t local my_player.py greedy_player_divercite.py -g (from command.txt)

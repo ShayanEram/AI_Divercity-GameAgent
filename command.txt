@@ -1,0 +1,1 @@
+python main_divercite.py -t local my_player.py minimax_player.py -g

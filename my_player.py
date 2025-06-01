@@ -1,10 +1,20 @@
+"""
+@file my_player.py
+@brief This is the core implementation of the minimax agent
+@author Raphael Tournier, Shayan Eram
+"""
 from player_divercite import PlayerDivercite
-from board_divercite import BoardDivercite
 from seahorse.game.action import Action
 from seahorse.game.game_state import GameState
 from game_state_divercite import GameStateDivercite
-from seahorse.game.light_action import LightAction
 from seahorse.utils.custom_exceptions import MethodNotImplementedError
+
+# Added Imports
+from seahorse.game.light_action import LightAction
+import itertools
+import hashlib
+
+# Added Imports (Need to be added in requirements.txt)
 import numpy as np
 
 
@@ -26,224 +36,201 @@ class MyPlayer(PlayerDivercite):
             time_limit (float, optional): the time limit in (s)
         """
         super().__init__(piece_type, name)
-        self.memory_limit = 500000
-        self.memory = dict()
+        # Add any information you want to store about the player here
+        # self.json_additional_info = {}
+        self.MAX = np.inf
+        self.MIN = -np.inf
+        self.memory = {}
+        self.MEMORY_LIMIT = 500000
+        self.BASE_DEPTH = 4
         self.color = 'B'
+        self.positions = set()
+        self.currentStep = 0
 
-
-
-# Memory........................................................................................................................
-
-    def addMemory(self, key, value):
-        if len(self.memory) > self.memory_limit:
-            (k:=next(iter(self.memory)), self.memory.pop(k))  
-        self.memory[key] = value
-        
-    def getMemory(self, key):
-        self.memoryCount += 1
-
-        # score = self.memory.pop(key)
-        # self.memory[key] = score
-        # return score
-    
-        return self.memory.get(key)
-
-
-    def getLayout(self, state: GameState, toString = False):
-        if toString:            
-            return hash(str(state.get_rep()) + str(state.players_pieces_left[self.get_id()]))
+    # Evaluation Functions------------------------------------------------------------------------------
+    def endSearch(self, state: GameState, depth: int) -> bool:
+        if state.is_done() or state.step == depth:
+            return True
         else:
-            return state.get_rep().get_env()        
+            return False
+
+    def getLayout(self, state: GameState) -> dict:
+        return state.get_rep().get_env()
+
+    def getStep(self, state: GameState) -> int:
+        return state.step
     
-    # Score...............................................................
+    def getOpponentId(self, state: GameState) -> int:
+        return [player.get_id() for player in state.get_players() if player.get_id() != self.get_id()][0]
+    
+    def playerPiecesLeft(self, state: GameState) -> dict:
+        piecesLeft = state.players_pieces_left[self.get_id()]
+        return piecesLeft
+    
+    def getPositionCoordinates(self, state1: GameState, state2: GameState) -> tuple:
+        env1 = self.getLayout(state1)
+        env2 = self.getLayout(state2)
 
-    def getDivercitePenalty(self, state: GameState):
-        
+        pos1 = set(env1.keys())
+        pos2 = set(env2.keys())
+
+        new_positions = pos2 - pos1
+
+        new_x, new_y = next(iter(new_positions))
+        return (new_x, new_y)
+    
+    # Heuristic Functions-------------------------------------------------------------------------------
+    def getColorPenalty(self, state: GameState) -> int:
         penalty = 0
-        
         board = self.getLayout(state)
-        
-        for color in {'R','G','B','Y'}:
-            for pos in board:
-                if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                    x,y = pos
-                    neighbors = state.get_rep().get_neighbours(x,y)
-                    colorCount = 0
-                    for k,v in neighbors.items():
-                        if v[0] != 'EMPTY':
-                            if v[0].get_type()[0] == color:
-                                colorCount+=1
-                    penalty += max(0,colorCount-1)
-        
-        return penalty
 
-    def getDistancesCites(self, state):
-        
-        positions = []
-        sumDistances = 0
-        
+        for pos, piece in board.items():
+            if piece.get_type()[2] == self.color and piece.get_type()[1] == 'C':
+                x, y = pos
+                neighbors = state.get_rep().get_neighbours(x, y)
+                color_counts = {
+                    color: sum(
+                        1 for neighbor in neighbors.values()
+                        if neighbor[0] != 'EMPTY' and neighbor[0].get_type()[0] == color
+                    )
+                    for color in {'R', 'G', 'B', 'Y'}
+                }
+                penalty += sum(max(0, count - 1) for count in color_counts.values())
+
+        return penalty        
+
+    def getCityDistances(self, state: GameState) -> float:
         board = self.getLayout(state)
-        for pos in board:
-            if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C':
-                positions.append(np.array(pos))
+        positions = [np.array(pos) for pos in board if board[pos].get_type()[2] == self.color and board[pos].get_type()[1] == 'C']
 
-        for i in range(len(positions)):
-            for j in range(i+1, len(positions)):
-                sumDistances += np.linalg.norm(positions[i] - positions[j])
+        sumDistances = sum(np.linalg.norm(p1 - p2) for p1, p2 in itertools.combinations(positions, 2))
         
         return sumDistances
-            
-    
-    def getDivercitePieces(self, state: GameState):
 
-        pieces_left = state.players_pieces_left[self.get_id()]
-        divercite_pieces = 0
-        for piece in pieces_left:
-            if piece[1] == 'R':
-                divercite_pieces += (pieces_left[piece] > 0)
-        return divercite_pieces    
-    
-                   
-
-    def getDeltaScore(self, state: GameState):
-
-        opponentId = [player.get_id()
-                      for player in state.players if player.get_id() != self.get_id()][0]
-        return state.scores[self.get_id()] - state.scores[opponentId]        
+    def getResourcePieceCount(self, state: GameState) -> int:
+        piecesLeft = self.playerPiecesLeft(state)
+        piecesCount = sum(1 for piece, count in piecesLeft.items() if piece[1] == 'R' and count > 0)
         
-            
+        return piecesCount
 
-    def getScore(self, state):
+    def getScoreDifference(self, state: GameState) -> int:
+        selfScore = state.scores[self.get_id()]
+        opponentScore = state.scores[self.getOpponentId(state)]
+        deltaScore = selfScore - opponentScore
         
-        step = self.current_step
+        return deltaScore        
+
+    def getScore(self, state: GameState) -> (float | int):
         
-        if step < 16 : 
-            return self.getDeltaScore(state) - self.getDivercitePenalty(state) - self.getDistancesCites(state)
-        if step < 25 : 
-            return self.getDeltaScore(state) - self.getDivercitePenalty(state)
-        elif step < 30 :
-            return self.getDeltaScore(state) + self.getDivercitePieces(state)
+        currentStep = self.currentStep
+        
+        if currentStep < 16 : 
+            return self.getScoreDifference(state) - self.getColorPenalty(state) - self.getCityDistances(state)
+        elif currentStep < 25 : 
+            return self.getScoreDifference(state) - self.getColorPenalty(state)
+        elif currentStep < 30 :
+            return self.getScoreDifference(state) + self.getResourcePieceCount(state)
         else:
-            return self.getDeltaScore(state) 
-
-
-
-
-    # Valid States.................................................................................
+            return self.getScoreDifference(state) 
     
-    def isValid(self, state1, state2):
-
-        if state2.step > 30:
+    def isValidState(self, state1: GameState, state2: GameState) -> bool:
+        
+        if self.getStep(state2) > 30:
             return True
         
-        if state1.step < 4 and state1.step == self.current_step:            
-                
-            env1 = self.getLayout(state1)
-            env2 = self.getLayout(state2)
-
-            pos2 = set(env2.keys())
-            pos1 = set(env1.keys())
-
-            x , y = list((pos2 - pos1))[0]
+        if self.getStep(state1) < 4 and self.getStep(state1) == self.currentStep:            
             
+            x, y = self.getPositionCoordinates(state1, state2)
             if (x,y) in [(3,4),(4,5),(5,4),(4,3)]:
                 return True   
             else:
                 return False  
         
-        if (state1.step - self.current_step) % 2 == 0 and state1.step < 16:
-            pieces_left = state2.players_pieces_left[self.get_id()]
+        if (self.getStep(state1) - self.currentStep) % 2 == 0 and self.getStep(state1) < 16:
+            remainingPieces = self.playerPiecesLeft(state2)
             totalRessources = 0
-            for piece in pieces_left:
+            for piece in remainingPieces:
                 if piece[1] == 'R':
-                    totalRessources += pieces_left[piece]
+                    totalRessources += remainingPieces[piece]
             if totalRessources < 12:
                 return False
-            
-    
 
-        env1 = state1.get_rep().get_env()
-        env2 = state2.get_rep().get_env()
-
-        pos2 = set(env2.keys())
-        pos1 = set(env1.keys())
-
-        x , y = list((pos2 - pos1))[0]
-
-        for (i,j) in [(i,j) for i in [-1,0,1] for j in [-1,1,0]]:
-            if (x+i,y+j) in self._positions:
+        x, y = self.getPositionCoordinates(state1, state2)
+        for dx, dy in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+            if (x + dx, y + dy) in self.positions:
                 return True
-        
+
         return False
-                 
-    # Minimax......................................................................................
 
-    def maxValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
-        if state.is_done() or state.step == max_depth:
-            return (self.getScore(state), None)
-        best_score = -np.inf
-        best_action = None
-        
-        state_step = state.step
-        
+    # Memory Functions---------------------------------------------------------------------------------
+    def addMemory(self, key, value) -> None:
+        if len(self.memory) >= self.MEMORY_LIMIT:
+            (k := next(iter(self.memory))), self.memory.pop(k)
+        self.memory[key] = value
 
-        possible_actions = state.generate_possible_heavy_actions()        
-
-        for action in possible_actions:
-
-            next_state = action.get_next_game_state()
+    def getMemory(self, key) -> (float | None):
+        return self.memory.get(key)
     
-            if self.isValid(state, next_state):
+    def getHashLayout(self, state: GameState) -> str:
+        return hashlib.sha256((str(state.get_rep()) + str(state.players_pieces_left[self.get_id()])).encode()).hexdigest()
 
-                layout = self.getLayout(next_state, toString = True)
-                if layout in self.memory:
-                    score = self.getMemory(layout)
-                else:
+    def checkMemory(self, state: GameState) -> tuple:
+        layout = self.getHashLayout(state)
+        value = self.getMemory(layout)
+        return (layout, value)
 
-                    score, _ = self.minValue(next_state, alpha, beta, max_depth)
-                    self.addMemory(layout, score)                
+    # Alpha-Beta Pruning---------------------------------------------------------------------------------
+    def alphaBetaSearch(self, state: GameState, alpha: float, beta: float, maxDepth: int) -> tuple:
+        value, action = self.maxValue(state, alpha, beta, maxDepth)
+        return (value, action)
 
-                if score > best_score:
-                    best_score = score
-                    best_action = action
-                    alpha = max(alpha, best_score)
-                if best_score >= beta:
-                    return (best_score, best_action)                
-
-                
-        return (best_score, best_action)
-
-    def minValue(self, state: GameState, alpha: float, beta: float, max_depth: int):
-        if state.is_done() or state.step == max_depth:
+    def maxValue(self, state: GameState, alpha: float, beta: float, maxDepth: int) -> tuple:
+        if self.endSearch(state, maxDepth):
             return (self.getScore(state), None)
-        best_score = np.inf
-        best_action = None
-        possible_actions = state.generate_possible_heavy_actions()
-        for action in possible_actions:
+        bestValue = self.MIN
+        bestAction = None
+        actions = state.generate_possible_heavy_actions()
+        for action in actions:
+            new_state = action.get_next_game_state()
 
-            next_state = action.get_next_game_state()
-            
-            if self.isValid(state, next_state):
+            if self.isValidState(state, new_state):
+                layout, value = self.checkMemory(new_state)
+                if value is None:
+                    value, _ = self.minValue(new_state, alpha, beta, maxDepth)
+                    self.addMemory(layout, value) 
 
-                layout = self.getLayout(next_state, toString = True)
-                if layout in self.memory:
-                    score = self.getMemory(layout)
-                else:
-                
+                if value > bestValue:
+                    bestValue = value
+                    bestAction = action
+                    alpha = max(alpha, bestValue)
+                if bestValue >= beta:
+                    return (bestValue, bestAction)
+        return (bestValue, bestAction)
 
-                    score, _ = self.maxValue(next_state, alpha, beta, max_depth)
-                    self.addMemory(layout, score)         
-                
-                if score < best_score:
-                    best_score = score
-                    best_action = action
-                    beta = min(beta, best_score)
-                if best_score <= alpha:
-                    return (best_score, best_action)
-                
-                
-        return (best_score, best_action)
+    def minValue(self, state: GameState, alpha: int, beta: int, maxDepth: int) -> tuple:
+        if self.endSearch(state, maxDepth):
+            return (self.getScore(state), None)
+        bestValue = self.MAX
+        bestAction = None
+        actions = state.generate_possible_heavy_actions()
+        for action in actions:
+            new_state = action.get_next_game_state()
 
+            if self.isValidState(state, new_state):
+                layout, value = self.checkMemory(new_state)
+                if value is None:
+                    value, _ = self.maxValue(new_state, alpha, beta, maxDepth)
+                    self.addMemory(layout, value)
+
+                if value < bestValue:
+                    bestValue = value
+                    bestAction = action
+                    beta = min(beta, bestValue)
+                if bestValue <= alpha:
+                    return (bestValue, bestAction)
+        return (bestValue, bestAction)
+
+    #-------------------------------------------------------------------------------------------------
     def compute_action(self, current_state: GameState, remaining_time: int = 1e9, **kwargs) -> Action:
         """
         Use the minimax algorithm to choose the best action based on the heuristic evaluation of game states.
@@ -254,38 +241,33 @@ class MyPlayer(PlayerDivercite):
         Returns:
             Action: The best action as determined by minimax.
         """
+        currentStep = self.getStep(current_state)
+        self.currentStep = currentStep
+        self.positions = set(self.getLayout(current_state).keys())
 
-        self.memoryCount = 0
-        
-        current_step = current_state.step
-        self.current_step= current_step
-        self._positions = set(current_state.get_rep().get_env().keys())
-
-        if current_step == 0:
-            data = {"piece": 'RC', "position": (5, 4)}
-            action = LightAction(data)
+        if currentStep == 0:
+            action = LightAction({"piece":'RC', "position": (5, 4)})
             self.color = 'W'
-            return (action)
-            
-        if current_step < 24  :
-            self.memory = dict()
-            max_depth = current_step + 4
-        elif current_step < 30  :
-            self.memory = dict()
-            max_depth = current_step + 5
-        elif current_step in {30,31}:
-            self.memory = dict()
-            max_depth = 40
+            return action
+        
+        if currentStep < 24:
+            self.memory = {}
+            maxDepth = currentStep + self.BASE_DEPTH
+        
+        elif currentStep < 30:
+            self.memory = {}
+            maxDepth = currentStep + self.BASE_DEPTH + 1
+        
+        elif currentStep < 32:
+            self.memory = {}
+            maxDepth = 40
+        
         else:
-            max_depth = 40
+            maxDepth = 40
 
+        if remaining_time < 500 and currentStep < 32:
+            maxDepth = self.BASE_DEPTH - 1
 
-        best_score, best_action = self.maxValue(current_state,
-                                                alpha=-np.inf,
-                                                beta=np.inf,
-                                                max_depth=max_depth)
+        _, action = self.alphaBetaSearch(current_state, self.MIN, self.MAX, maxDepth)
 
-        
-        # print(self.memoryCount)
-        
-        return best_action
+        return action
